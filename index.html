@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finals Week Planner</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c7c7cc; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 pb-12">
+
+    <!-- Modal Overlay (Hidden by default) -->
+    <div id="eventModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden fade-in">
+            <div class="bg-indigo-600 p-4 flex justify-between items-center text-white">
+                <h3 id="modalTitle" class="font-bold flex items-center gap-2">Edit Task</h3>
+                <button onclick="closeModal()" class="hover:bg-indigo-700 p-1 rounded"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+            </div>
+            <div class="p-4 space-y-4">
+                <input type="hidden" id="eventId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Time</label>
+                        <input id="eventTime" class="w-full border rounded p-2 text-sm" placeholder="10:00 AM">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Duration</label>
+                        <input id="eventDuration" class="w-full border rounded p-2 text-sm" placeholder="60m">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Title</label>
+                    <input id="eventTitle" class="w-full border rounded p-2 text-sm" placeholder="Task Title">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Subject</label>
+                        <input id="eventSubject" class="w-full border rounded p-2 text-sm" placeholder="Subject">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Type</label>
+                        <select id="eventType" class="w-full border rounded p-2 text-sm bg-white">
+                            <option value="study">Study</option>
+                            <option value="break">Break</option>
+                            <option value="routine">Routine</option>
+                            <option value="activity">Activity</option>
+                            <option value="exam">Exam</option>
+                            <option value="buffer">Buffer</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Description</label>
+                    <textarea id="eventDesc" class="w-full border rounded p-2 text-sm" rows="3"></textarea>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="eventUrgent" class="rounded text-red-500">
+                    <label for="eventUrgent" class="text-sm font-bold text-red-500">Mark as Urgent / Exam</label>
+                </div>
+                <div class="flex gap-2 pt-2 border-t mt-4">
+                    <button id="deleteBtn" onclick="deleteEvent()" class="flex-1 bg-red-50 text-red-600 py-2 rounded-lg font-bold text-sm hover:bg-red-100 hidden">Delete</button>
+                    <button onclick="saveEvent()" class="flex-[2] bg-indigo-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-indigo-700">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 py-3">
+            <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-indigo-900 flex items-center gap-2">
+                        <!-- Brain Icon -->
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
+                        Finals Command Center
+                    </h1>
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-gray-500 mt-1">
+                        <span>Principal Engineer Mode: Activated</span>
+                        <span class="hidden sm:inline text-gray-300">|</span>
+                        <span id="currentTime" class="flex items-center gap-1 font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full w-fit">
+                            Loading...
+                        </span>
+                        <span class="hidden sm:inline text-gray-300">|</span>
+                        <span id="dayPercentage" class="flex items-center gap-1 font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full w-fit">
+                            Loading...
+                        </span>
+                        <span id="gcalStatusBadge" class="hidden items-center gap-1 font-bold text-green-600 px-2 py-0.5 w-fit">
+                             • GCal Linked
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleEditMode()" id="editModeBtn" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-bold transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                        Customize
+                    </button>
+                    <div class="h-6 w-px bg-gray-300 mx-1"></div>
+                    <div class="flex bg-gray-100 rounded-md p-0.5">
+                        <button onclick="setView('day')" id="viewDayBtn" class="px-3 py-1 rounded-sm text-sm font-medium transition-all bg-white text-indigo-600 shadow-sm">Daily</button>
+                        <button onclick="setView('week')" id="viewWeekBtn" class="px-3 py-1 rounded-sm text-sm font-medium transition-all text-gray-500">Weekly</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day Navigation (Visible only in day view) -->
+            <div id="dayNavContainer" class="flex items-center justify-between bg-indigo-50 p-2 rounded-lg">
+                <button onclick="changeDay(-1)" class="p-1 hover:bg-indigo-200 rounded text-indigo-700">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+                <div class="text-center">
+                    <h2 id="currentDayTitle" class="text-lg font-bold text-indigo-900">Monday</h2>
+                    <span id="currentDayTheme" class="text-xs text-indigo-600 font-medium tracking-wide uppercase">Momentum Monday</span>
+                </div>
+                <button onclick="changeDay(1)" class="p-1 hover:bg-indigo-200 rounded text-indigo-700">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-6" id="mainContainer">
+        <!-- Content injected by JS -->
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- DATA & CONSTANTS ---
+        const INITIAL_SCHEDULE = {
+            Monday: {
+                theme: "Momentum Monday",
+                quote: "Start strong, stay strong.",
+                events: [
+                    { id: 'm1', time: '10:00 AM', type: 'routine', title: 'Morning Warm-up', desc: 'Hydrate, Breakfast, Priority List', duration: '30m' },
+                    { id: 'm2', time: '10:30 AM', type: 'study', subject: 'Chemistry', title: 'Problem Solving Practice', desc: 'Stoichiometry & Gas Laws drills.', urgent: true, duration: '90m' },
+                    { id: 'm3', time: '12:00 PM', type: 'break', title: 'Power Lunch', desc: 'High protein meal + 15m walk', duration: '45m' },
+                    { id: 'm4', time: '12:45 PM', type: 'study', subject: 'WHAP', title: 'Timeline Memorization', desc: 'Period 3 & 4 Key Events.', duration: '60m' },
+                    { id: 'm5', time: '01:45 PM', type: 'study', subject: 'English', title: 'Essay Outline Prep', desc: 'Draft thesis statements.', duration: '45m' },
+                    { id: 'm6', time: '02:30 PM', type: 'break', title: 'Mindfulness Break', desc: 'Meditation or Power Nap', duration: '30m' },
+                    { id: 'm7', time: '03:00 PM', type: 'study', subject: 'AP CSA', title: 'Coding & Debugging', desc: 'Array/ArrayList traversal drills.', duration: '90m' },
+                    { id: 'm8', time: '04:30 PM', type: 'buffer', title: 'Buffer / Flex Time', desc: 'Catch up on overflow tasks', duration: '30m' },
+                    { id: 'm9', time: '05:00 PM', type: 'routine', title: 'Evening Recap', desc: 'Update Done List, prep bag.', duration: '30m' }
+                ]
+            },
+            Tuesday: {
+                theme: "Technical Tuesday",
+                quote: "Precision beats power.",
+                events: [
+                    { id: 't1', time: '10:00 AM', type: 'routine', title: 'Morning Warm-up', desc: 'Stretching & Priorities', duration: '30m' },
+                    { id: 't2', time: '10:30 AM', type: 'study', subject: 'AP CSA', title: 'Mock FRQ Practice', desc: 'Timed FRQ (20 mins).', urgent: true, duration: '60m' },
+                    { id: 't3', time: '11:30 AM', type: 'study', subject: 'German', title: 'Vocabulary Drills', desc: 'Quizlet set: Conjunctions.', duration: '45m' },
+                    { id: 't4', time: '12:15 PM', type: 'break', title: 'Lunch & Relax', desc: 'No screens while eating.', duration: '45m' },
+                    { id: 't5', time: '01:00 PM', type: 'study', subject: 'Health', title: 'Concept Review', desc: 'Review unit summaries.', duration: '45m' },
+                    { id: 't6', time: '01:45 PM', type: 'study', subject: 'Chemistry', title: 'Practice Test', desc: 'Full timed section MC.', urgent: true, duration: '60m' },
+                    { id: 't7', time: '02:45 PM', type: 'break', title: 'Active Break', desc: 'Jumping jacks or quick jog.', duration: '15m' },
+                    { id: 't8', time: '03:00 PM', type: 'study', subject: 'English', title: 'Literary Devices', desc: 'Review analysis terms.', duration: '45m' },
+                    { id: 't9', time: '05:00 PM', type: 'routine', title: 'Evening Recap', desc: 'Pack snacks.', duration: '30m' }
+                ]
+            },
+            Wednesday: {
+                theme: "Wellness Wednesday",
+                quote: "A healthy body fuels a healthy mind.",
+                events: [
+                    { id: 'w1', time: '10:00 AM', type: 'routine', title: 'Morning Warm-up', desc: 'Deep breathing & Goal setting', duration: '30m' },
+                    { id: 'w2', time: '10:30 AM', type: 'study', subject: 'WHAP', title: 'DBQ Practice', desc: 'Outline one full DBQ.', duration: '60m' },
+                    { id: 'w3', time: '11:30 AM', type: 'break', title: 'Early Lunch', desc: 'Carb load for tennis.', duration: '45m' },
+                    { id: 'w4', time: '12:15 PM', type: 'activity', title: 'Tennis Match', desc: 'Physical Activity!', duration: '120m' },
+                    { id: 'w5', time: '02:30 PM', type: 'routine', title: 'Post-Workout Reset', desc: 'Shower, Snack, Hydrate.', duration: '30m' },
+                    { id: 'w6', time: '03:00 PM', type: 'study', subject: 'German', title: 'Grammar Review', desc: 'Case endings chart.', duration: '45m' },
+                    { id: 'w7', time: '03:45 PM', type: 'study', subject: 'Chemistry', title: 'Formulas Sheet', desc: 'Memorize polyatomic ions.', duration: '30m' },
+                    { id: 'w8', time: '05:00 PM', type: 'routine', title: 'Evening Recap', desc: 'Sleep early tonight.', duration: '30m' }
+                ]
+            },
+            Thursday: {
+                theme: "Thorough Thursday",
+                quote: "Leave no stone unturned.",
+                events: [
+                    { id: 'th1', time: '10:00 AM', type: 'routine', title: 'Morning Warm-up', desc: 'Prioritize weak spots', duration: '30m' },
+                    { id: 'th2', time: '10:30 AM', type: 'exam', subject: 'English', title: 'FINAL EXAM', desc: 'Focus & Confidence.', urgent: true, duration: '120m' },
+                    { id: 'th3', time: '12:30 PM', type: 'break', title: 'Celebratory Lunch', desc: 'Treat yourself!', duration: '60m' },
+                    { id: 'th4', time: '01:30 PM', type: 'study', subject: 'AP CSA', title: 'Logic Gates & Binary', desc: 'Quick review Unit 1.', duration: '45m' },
+                    { id: 'th5', time: '02:15 PM', type: 'study', subject: 'WHAP', title: 'Rapid Fire Review', desc: 'All flashcards review.', duration: '60m' },
+                    { id: 'th6', time: '03:15 PM', type: 'break', title: 'Tea Break', desc: 'No phone, just relax.', duration: '20m' },
+                    { id: 'th7', time: '03:35 PM', type: 'study', subject: 'Health', title: 'Final Review', desc: 'Review missed quiz Qs.', duration: '40m' },
+                    { id: 'th9', time: '05:00 PM', type: 'routine', title: 'Evening Recap', desc: 'Prep for Science day.', duration: '30m' }
+                ]
+            },
+            Friday: {
+                theme: "Finale Friday",
+                quote: "Finish what you started.",
+                events: [
+                    { id: 'f1', time: '10:00 AM', type: 'routine', title: 'Morning Warm-up', desc: 'High energy music', duration: '30m' },
+                    { id: 'f2', time: '10:30 AM', type: 'exam', subject: 'Chemistry', title: 'FINAL EXAM', desc: 'Check sig figs!', urgent: true, duration: '120m' },
+                    { id: 'f3', time: '12:30 PM', type: 'break', title: 'Lunch', desc: 'Refuel.', duration: '45m' },
+                    { id: 'f4', time: '01:15 PM', type: 'exam', subject: 'AP CSA', title: 'FINAL EXAM', desc: 'Trace code carefully.', urgent: true, duration: '120m' },
+                    { id: 'f5', time: '03:15 PM', type: 'activity', title: 'Freedom!', desc: 'No studying allowed.', duration: 'N/A' },
+                    { id: 'f6', time: '05:00 PM', type: 'routine', title: 'Weekly Reflection', desc: 'What went well?', duration: '30m' }
+                ]
+            },
+            Saturday: {
+                theme: "Catch-up Saturday",
+                quote: "Balance is key.",
+                events: [
+                    { id: 's1', time: '11:00 AM', type: 'routine', title: 'Sleep In', desc: 'Recovery sleep.', duration: '60m' },
+                    { id: 's2', time: '12:00 PM', type: 'buffer', title: 'Weekend Catch-up', desc: 'Only if necessary.', duration: '120m' }
+                ]
+            },
+            Sunday: {
+                theme: "Strategic Sunday",
+                quote: "Prepare for the next wave.",
+                events: [
+                    { id: 'su1', time: '11:00 AM', type: 'routine', title: 'Reset', desc: 'Laundry, clean desk, plan.', duration: '120m' }
+                ]
+            }
+        };
+
+        const DAYS = Object.keys(INITIAL_SCHEDULE);
+
+        // --- STATE MANAGEMENT ---
+        let state = {
+            currentDay: 'Monday',
+            schedule: JSON.parse(localStorage.getItem('studyPlannerSchedule')) || INITIAL_SCHEDULE,
+            completedTasks: JSON.parse(localStorage.getItem('studyPlannerTasks')) || {},
+            reflections: JSON.parse(localStorage.getItem('studyPlannerReflections')) || {},
+            hydration: parseInt(localStorage.getItem('studyPlannerHydration')) || 0,
+            view: 'day',
+            isEditMode: false,
+            isGCalConnected: JSON.parse(localStorage.getItem('studyPlannerGCal')) || false,
+            pomodoro: { time: 25 * 60, isActive: false, intervalId: null }
+        };
+
+        // --- SAVE TO LOCALSTORAGE ---
+        function persist() {
+            localStorage.setItem('studyPlannerSchedule', JSON.stringify(state.schedule));
+            localStorage.setItem('studyPlannerTasks', JSON.stringify(state.completedTasks));
+            localStorage.setItem('studyPlannerReflections', JSON.stringify(state.reflections));
+            localStorage.setItem('studyPlannerHydration', state.hydration.toString());
+            localStorage.setItem('studyPlannerGCal', JSON.stringify(state.isGCalConnected));
+            render(); // Re-render application on state change
+        }
+
+        // --- HELPER FUNCTIONS ---
+        function getSubjectColor(subject) {
+            const colors = {
+                'Chemistry': 'bg-teal-100 text-teal-800 border-teal-200',
+                'AP CSA': 'bg-blue-100 text-blue-800 border-blue-200',
+                'WHAP': 'bg-amber-100 text-amber-800 border-amber-200',
+                'English': 'bg-rose-100 text-rose-800 border-rose-200',
+                'German': 'bg-purple-100 text-purple-800 border-purple-200',
+                'Health': 'bg-green-100 text-green-800 border-green-200'
+            };
+            return colors[subject] || 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        // --- INTERACTIVITY ACTIONS ---
+        function setView(view) {
+            state.view = view;
+            document.getElementById('viewDayBtn').className = view === 'day' ? "px-3 py-1 rounded-sm text-sm font-medium transition-all bg-white text-indigo-600 shadow-sm" : "px-3 py-1 rounded-sm text-sm font-medium transition-all text-gray-500";
+            document.getElementById('viewWeekBtn').className = view === 'week' ? "px-3 py-1 rounded-sm text-sm font-medium transition-all bg-white text-indigo-600 shadow-sm" : "px-3 py-1 rounded-sm text-sm font-medium transition-all text-gray-500";
+            document.getElementById('dayNavContainer').style.display = view === 'day' ? 'flex' : 'none';
+            render();
+        }
+
+        function changeDay(offset) {
+            const idx = DAYS.indexOf(state.currentDay);
+            const newIdx = idx + offset;
+            if (newIdx >= 0 && newIdx < DAYS.length) {
+                state.currentDay = DAYS[newIdx];
+                persist();
+            }
+        }
+
+        function setDayDirectly(day) {
+            state.currentDay = day;
+            setView('day');
+        }
+
+        function toggleTask(id) {
+            if (state.isEditMode) return;
+            state.completedTasks[id] = !state.completedTasks[id];
+            persist();
+        }
+
+        function updateReflection(type, value) {
+            if (!state.reflections[state.currentDay]) state.reflections[state.currentDay] = {};
+            state.reflections[state.currentDay][type] = value;
+            persist(); // Note: Frequent writing, debouncing would be better in production
+        }
+
+        function updateHydration(val) {
+            if (val === -1) state.hydration = 0; // Reset logic
+            else state.hydration = val;
+            persist();
+        }
+
+        function toggleEditMode() {
+            state.isEditMode = !state.isEditMode;
+            const btn = document.getElementById('editModeBtn');
+            if (state.isEditMode) {
+                btn.className = "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-bold transition-colors bg-orange-100 text-orange-700 ring-2 ring-orange-500";
+                btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Done Editing`;
+            } else {
+                btn.className = "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-bold transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200";
+                btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg> Customize`;
+            }
+            render();
+        }
+
+        function resetProgress() {
+            if(confirm("Reset all progress?")) {
+                state.completedTasks = {};
+                state.reflections = {};
+                state.hydration = 0;
+                persist();
+            }
+        }
+
+        function resetSchedule() {
+            if(confirm("Revert schedule to default?")) {
+                state.schedule = JSON.parse(JSON.stringify(INITIAL_SCHEDULE)); // Deep copy
+                persist();
+            }
+        }
+
+        function toggleGCal() {
+            if (state.isGCalConnected) {
+                if(confirm("Disconnect GCal?")) state.isGCalConnected = false;
+            } else {
+                if(confirm("Connect to Google Calendar? (Downloads .ics)")) {
+                    state.isGCalConnected = true;
+                    // Generate ICS logic
+                    const events = state.schedule[state.currentDay].events;
+                    let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//FinalsPlanner//EN\n";
+                    events.forEach(ev => {
+                        ics += `BEGIN:VEVENT\nSUMMARY:${ev.title}\nDESCRIPTION:${ev.desc}\nEND:VEVENT\n`;
+                    });
+                    ics += "END:VCALENDAR";
+                    const blob = new Blob([ics], { type: 'text/calendar' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `${state.currentDay}.ics`;
+                    link.click();
+                }
+            }
+            persist();
+        }
+
+        // --- POMODORO ---
+        function togglePomodoro() {
+            if (state.pomodoro.isActive) {
+                clearInterval(state.pomodoro.intervalId);
+                state.pomodoro.isActive = false;
+            } else {
+                state.pomodoro.isActive = true;
+                state.pomodoro.intervalId = setInterval(() => {
+                    if (state.pomodoro.time > 0) {
+                        state.pomodoro.time--;
+                        document.getElementById('pomoTime').innerText = formatTime(state.pomodoro.time);
+                    } else {
+                        clearInterval(state.pomodoro.intervalId);
+                        state.pomodoro.isActive = false;
+                        alert("Pomodoro Complete!");
+                        renderPomodoroBtn();
+                    }
+                }, 1000);
+            }
+            renderPomodoroBtn();
+        }
+
+        function resetPomodoro() {
+            clearInterval(state.pomodoro.intervalId);
+            state.pomodoro.isActive = false;
+            state.pomodoro.time = 25 * 60;
+            document.getElementById('pomoTime').innerText = "25:00";
+            renderPomodoroBtn();
+        }
+
+        function renderPomodoroBtn() {
+            const btn = document.getElementById('pomoToggleBtn');
+            if (state.pomodoro.isActive) {
+                btn.innerText = "Pause";
+                btn.className = "px-3 py-1 text-xs rounded font-medium bg-red-100 text-red-700";
+            } else {
+                btn.innerText = "Start";
+                btn.className = "px-3 py-1 text-xs rounded font-medium bg-green-100 text-green-700";
+            }
+        }
+
+        // --- MODAL LOGIC ---
+        let editingEventId = null;
+
+        function openModal(eventId = null) {
+            const modal = document.getElementById('eventModal');
+            const title = document.getElementById('modalTitle');
+            const deleteBtn = document.getElementById('deleteBtn');
+            editingEventId = eventId;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            if (eventId) {
+                // Edit existing
+                const ev = state.schedule[state.currentDay].events.find(e => e.id === eventId);
+                title.innerText = "Edit Task";
+                deleteBtn.classList.remove('hidden');
+                
+                document.getElementById('eventTime').value = ev.time;
+                document.getElementById('eventDuration').value = ev.duration;
+                document.getElementById('eventTitle').value = ev.title;
+                document.getElementById('eventSubject').value = ev.subject || '';
+                document.getElementById('eventType').value = ev.type;
+                document.getElementById('eventDesc').value = ev.desc;
+                document.getElementById('eventUrgent').checked = ev.urgent || false;
+            } else {
+                // New
+                title.innerText = "New Task";
+                deleteBtn.classList.add('hidden');
+                document.getElementById('eventTime').value = "10:00 AM";
+                document.getElementById('eventDuration').value = "60m";
+                document.getElementById('eventTitle').value = "";
+                document.getElementById('eventSubject').value = "";
+                document.getElementById('eventType').value = "study";
+                document.getElementById('eventDesc').value = "";
+                document.getElementById('eventUrgent').checked = false;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('eventModal').classList.add('hidden');
+            document.getElementById('eventModal').classList.remove('flex');
+            editingEventId = null;
+        }
+
+        function saveEvent() {
+            const newData = {
+                id: editingEventId || Date.now().toString(),
+                time: document.getElementById('eventTime').value,
+                duration: document.getElementById('eventDuration').value,
+                title: document.getElementById('eventTitle').value,
+                subject: document.getElementById('eventSubject').value,
+                type: document.getElementById('eventType').value,
+                desc: document.getElementById('eventDesc').value,
+                urgent: document.getElementById('eventUrgent').checked
+            };
+
+            if (editingEventId) {
+                const events = state.schedule[state.currentDay].events;
+                const index = events.findIndex(e => e.id === editingEventId);
+                events[index] = newData;
+            } else {
+                state.schedule[state.currentDay].events.push(newData);
+            }
+            
+            closeModal();
+            persist();
+        }
+
+        function deleteEvent() {
+            if(confirm("Delete task?")) {
+                state.schedule[state.currentDay].events = state.schedule[state.currentDay].events.filter(e => e.id !== editingEventId);
+                closeModal();
+                persist();
+            }
+        }
+
+        // --- RENDERERS ---
+
+        function render() {
+            // Update Header Info
+            document.getElementById('currentDayTitle').innerText = state.currentDay;
+            document.getElementById('currentDayTheme').innerText = state.schedule[state.currentDay].theme;
+            
+            const gcalBadge = document.getElementById('gcalStatusBadge');
+            if (state.isGCalConnected) {
+                gcalBadge.classList.remove('hidden');
+                gcalBadge.classList.add('flex');
+            } else {
+                gcalBadge.classList.add('hidden');
+            }
+
+            const main = document.getElementById('mainContainer');
+            main.innerHTML = ''; // Clear content
+
+            if (state.view === 'week') {
+                renderWeekView(main);
+            } else {
+                renderDayView(main);
+            }
+        }
+
+        function renderWeekView(container) {
+            let html = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">`;
+            
+            // Stats Card
+            const allEvents = Object.values(state.schedule).flatMap(d => d.events);
+            const total = allEvents.length;
+            const completed = allEvents.filter(e => state.completedTasks[e.id]).length;
+            const pct = total === 0 ? 0 : Math.round((completed/total)*100);
+
+            html += `
+                <div class="col-span-full mb-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="text-lg font-bold mb-2 flex items-center gap-2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-600"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                        Weekly Progress
+                    </h3>
+                    <div class="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden">
+                        <div class="bg-indigo-600 h-4 rounded-full transition-all duration-500 flex items-center justify-center text-[10px] text-white font-bold" style="width: ${pct}%">${pct}%</div>
+                    </div>
+                    <div class="text-sm text-gray-500">Tracking <strong>${total}</strong> sessions.</div>
+                </div>
+            `;
+
+            DAYS.forEach(day => {
+                const isCurrent = day === state.currentDay;
+                const events = state.schedule[day].events;
+                html += `
+                    <div onclick="setDayDirectly('${day}')" class="p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${isCurrent ? 'ring-2 ring-indigo-500 border-indigo-500 bg-white' : 'bg-white border-gray-200 hover:border-indigo-300'}">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-gray-800">${day}</h3>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">${events.length} Items</span>
+                        </div>
+                        <div class="space-y-1">
+                            ${events.slice(0,3).map(ev => `
+                                <div class="flex items-center gap-2 text-xs text-gray-600 truncate">
+                                    <div class="w-1.5 h-1.5 rounded-full ${ev.urgent ? 'bg-red-500' : ev.type === 'break' ? 'bg-green-400' : 'bg-blue-400'}"></div>
+                                    ${ev.subject || ev.title}
+                                </div>
+                            `).join('')}
+                            ${events.length > 3 ? `<div class="text-xs text-gray-400 pl-3">+${events.length - 3} more...</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function renderDayView(container) {
+            const dayData = state.schedule[state.currentDay];
+            const events = dayData.events;
+            const completedCount = events.filter(e => state.completedTasks[e.id]).length;
+            const totalCount = events.length;
+            const progressPct = totalCount === 0 ? 0 : Math.round((completedCount/totalCount)*100);
+
+            // Grid Container
+            container.innerHTML = `<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left: Schedule -->
+                <div class="lg:col-span-2 space-y-6">
+                    
+                    <!-- Motivation -->
+                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
+                        <p class="text-xs font-medium uppercase tracking-widest opacity-80 mb-2">Daily Motivation</p>
+                        <p class="text-lg font-serif italic">"${dayData.quote}"</p>
+                    </div>
+
+                    <!-- Morning Priority -->
+                    <div class="bg-white rounded-xl shadow-sm border border-orange-100 p-4">
+                        <h3 class="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-orange-500"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            Morning Priority List
+                        </h3>
+                        <textarea oninput="updateReflection('morning', this.value)" class="w-full text-sm bg-orange-50/50 border-none rounded-md p-2 focus:ring-1 focus:ring-orange-300 resize-none" rows="2" placeholder="Top 3 Priorities...">${state.reflections[state.currentDay]?.morning || ''}</textarea>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-end">
+                            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                Today's Timeline
+                            </h3>
+                            ${state.isEditMode 
+                                ? `<span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded">EDIT MODE</span>`
+                                : `<span class="text-xs font-medium text-gray-500">${completedCount}/${totalCount} Complete</span>`
+                            }
+                        </div>
+                        
+                        ${!state.isEditMode ? `
+                        <div class="w-full bg-gray-200 rounded-full h-4 mb-4 overflow-hidden">
+                            <div class="bg-indigo-600 h-4 rounded-full transition-all duration-500 flex items-center justify-center text-[10px] text-white font-bold" style="width: ${progressPct}%">${progressPct}%</div>
+                        </div>` : ''}
+
+                        <div class="relative border-l-2 border-indigo-100 ml-3 space-y-6 pb-4">
+                            ${events.map(ev => {
+                                const isDone = state.completedTasks[ev.id];
+                                const dotClass = isDone ? 'bg-green-500 border-green-500' : ev.urgent ? 'bg-white border-red-500 animate-pulse' : 'bg-white border-indigo-300';
+                                const cardClass = state.isEditMode ? 'bg-white border-orange-300 ring-1 ring-orange-200 border-dashed' 
+                                                : isDone ? 'bg-gray-50 border-gray-200 opacity-75'
+                                                : ev.type === 'break' ? 'bg-green-50 border-green-100'
+                                                : ev.urgent ? 'bg-white border-red-200 shadow-md ring-1 ring-red-100'
+                                                : 'bg-white border-gray-200 shadow-sm';
+                                
+                                const subjectBadge = ev.subject ? `<span class="text-xs font-semibold px-2 py-0.5 rounded border ${getSubjectColor(ev.subject)}">${ev.subject}</span>` : '';
+
+                                return `
+                                <div class="relative pl-8 group">
+                                    <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 transition-colors ${dotClass}">
+                                        ${isDone ? '<svg width="10" height="10" class="text-white mx-auto mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+                                    </div>
+                                    <div class="p-4 rounded-xl border transition-all duration-200 ${cardClass}">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-mono text-sm font-bold text-gray-500">${ev.time}</span>
+                                                ${ev.urgent ? '<span class="bg-red-100 text-red-600 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase">Urgent</span>' : ''}
+                                            </div>
+                                            <span class="text-xs text-gray-400 flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ${ev.duration}</span>
+                                        </div>
+                                        <div class="flex justify-between items-start">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <h4 class="font-bold text-gray-900 ${isDone && !state.isEditMode ? 'line-through' : ''}">${ev.title}</h4>
+                                                    ${subjectBadge}
+                                                </div>
+                                                <p class="text-sm text-gray-600 mb-3">${ev.desc}</p>
+                                            </div>
+                                            ${state.isEditMode 
+                                                ? `<button onclick="openModal('${ev.id}')" class="p-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`
+                                                : `<button onclick="toggleTask('${ev.id}')" class="p-2 rounded-full transition-colors ${isDone ? 'text-green-600 hover:bg-green-100' : 'text-gray-300 hover:bg-gray-100 hover:text-gray-500'}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></button>`
+                                            }
+                                        </div>
+                                        ${isDone && !state.isEditMode && ev.type === 'study' ? '<div class="mt-2 text-xs font-semibold text-indigo-600 flex items-center gap-1 fade-in">Block Complete! Take a small treat.</div>' : ''}
+                                    </div>
+                                </div>`;
+                            }).join('')}
+
+                            ${state.isEditMode ? `<button onclick="openModal()" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-bold flex items-center justify-center gap-2 hover:border-indigo-400 hover:text-indigo-500 hover:bg-indigo-50 transition-all">+ Add New Task</button>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Evening Reflection -->
+                    <div class="bg-indigo-900 rounded-xl shadow-sm p-4 text-white">
+                        <h3 class="text-sm font-bold mb-2 flex items-center gap-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg> Evening Recap
+                        </h3>
+                        <textarea oninput="updateReflection('evening', this.value)" class="w-full text-sm bg-indigo-800/50 border border-indigo-700 rounded-md p-2 focus:ring-1 focus:ring-indigo-400 placeholder-indigo-300/50 resize-none text-white" rows="3" placeholder="Recap...">${state.reflections[state.currentDay]?.evening || ''}</textarea>
+                    </div>
+                </div>
+
+                <!-- Right: Tools -->
+                <div class="space-y-6">
+                    <!-- Pomodoro -->
+                    <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex flex-col items-center justify-center w-full">
+                        <div class="text-sm font-semibold text-gray-500 mb-1 flex items-center gap-2">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Pomodoro
+                        </div>
+                        <div id="pomoTime" class="text-3xl font-mono font-bold text-gray-800 mb-2">${formatTime(state.pomodoro.time)}</div>
+                        <div class="flex gap-2">
+                            <button id="pomoToggleBtn" onclick="togglePomodoro()" class="px-3 py-1 text-xs rounded font-medium bg-green-100 text-green-700">Start</button>
+                            <button onclick="resetPomodoro()" class="px-3 py-1 text-xs rounded bg-gray-100 text-gray-600 hover:bg-gray-200">Reset</button>
+                        </div>
+                    </div>
+
+                    <!-- Hydration -->
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-blue-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-bold text-gray-700 flex items-center gap-2"><svg width="16" height="16" class="text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg> Hydration</h4>
+                            <span class="text-xs font-bold text-blue-600">${state.hydration} Glasses</span>
+                        </div>
+                        <div class="flex gap-1 flex-wrap mb-3">
+                            ${[...Array(8)].map((_, i) => `<div class="h-8 flex-1 rounded-md transition-all ${i < state.hydration ? 'bg-blue-500' : 'bg-blue-100'}"></div>`).join('')}
+                        </div>
+                        <button onclick="updateHydration(${state.hydration >= 8 ? -1 : state.hydration + 1})" class="w-full py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg hover:bg-blue-100 transition-colors">${state.hydration >= 8 ? 'Goal Reached! Reset?' : '+ Add Water'}</button>
+                    </div>
+
+                    <!-- Settings -->
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 space-y-2">
+                        <h4 class="font-bold text-gray-700 text-sm mb-2">Settings</h4>
+                        <button onclick="toggleGCal()" class="w-full py-2 text-xs font-bold flex items-center justify-center gap-1 transition-colors rounded border ${state.isGCalConnected ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}">
+                            ${state.isGCalConnected ? 'GCal Linked' : 'Connect GCal'}
+                        </button>
+                        <div class="h-px bg-gray-100 my-2"></div>
+                        <button onclick="resetProgress()" class="w-full py-2 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-700 flex items-center justify-center gap-1 transition-colors rounded border border-gray-200">Reset Progress</button>
+                        <button onclick="resetSchedule()" class="w-full py-2 text-xs text-red-400 hover:bg-red-50 hover:text-red-600 flex items-center justify-center gap-1 transition-colors rounded border border-red-100">Revert Schedule</button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // --- CLOCK ---
+        setInterval(() => {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+            const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            document.getElementById('currentTime').innerText = `${dateStr} • ${timeStr}`;
+            
+            const secs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+            const pct = Math.round((secs / 86400) * 100);
+            document.getElementById('dayPercentage').innerText = `Day Passed: ${pct}%`;
+        }, 1000);
+
+        // --- INIT ---
+        render(); // Initial Render
+    </script>
+</body>
+</html>
